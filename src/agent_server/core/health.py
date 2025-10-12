@@ -24,6 +24,7 @@ class InfoResponse(BaseModel):
     version: str
     description: str
     status: str
+    flags: dict
 
 
 @router.get("/info", response_model=InfoResponse)
@@ -33,7 +34,13 @@ async def info():
         name="Aegra",
         version="0.1.0",
         description="Production-ready Agent Protocol server built on LangGraph",
-        status="running"
+        status="running",
+        flags={
+            "assistants": True,
+            "crons": False,
+            "langsmith": True,
+            "langsmith_tracing_replicas": True
+        }
     )
 
 

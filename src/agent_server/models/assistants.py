@@ -1,7 +1,7 @@
 """Assistant-related Pydantic models for Agent Protocol"""
 from typing import Optional, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class AssistantCreate(BaseModel):
@@ -26,12 +26,22 @@ class Assistant(BaseModel):
     graph_id: str
     user_id: str
     version: int = Field(..., description="The version of the assistant.")
-    metadata: Dict[str, Any] = Field(default_factory=dict, alias="metadata_dict")
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
+    #     # Map the metadata_dict in input JSON to metadata attribute in the object
+    #     alias_generator = lambda string: 'metadata_dict' if string == 'metadata' else string
+    #
+    # # If you need to rename the key after validation
+    # @model_validator(mode="after")
+    # def rename_metadata_key(cls, values):
+    #     # If 'metadata_dict' is in the input JSON, rename it to 'metadata'
+    #     if 'metadata_dict' in values:
+    #         values['metadata'] = values.pop('metadata_dict')
+    #     return values
 
 
 class AssistantUpdate(BaseModel):

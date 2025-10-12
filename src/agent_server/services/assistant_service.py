@@ -34,13 +34,14 @@ def to_pydantic(row: AssistantORM) -> Assistant:
         row_dict["assistant_id"] = str(row_dict["assistant_id"])
     if "user_id" in row_dict and isinstance(row_dict["user_id"], uuid.UUID):
         row_dict["user_id"] = str(row_dict["user_id"])
-    return Assistant.model_validate(row_dict)
+    row_dict["metadata"] = row.metadata_dict
+    return Assistant.model_validate(row_dict, by_name=True)
 
 
 def _state_jsonschema(graph) -> dict | None:
     """Extract state schema from graph channels"""
     from typing import Any
-    from langgraph._internal._pydantic import create_model
+    from langchain_core.runnables.utils import create_model
     
     fields: dict = {}
     for k in graph.stream_channels_list:
@@ -236,7 +237,12 @@ class AssistantService:
     ) -> List[Assistant]:
         """Search assistants with filters"""
         # Start with user's assistants
-        stmt = select(AssistantORM).where(AssistantORM.user_id == user_identity)
+        stmt = select(AssistantORM).where(
+            or_(
+                AssistantORM.user_id == user_identity,
+                AssistantORM.user_id == "system"
+            )
+        )
         
         # Apply filters
         if request.name:
@@ -298,7 +304,7 @@ class AssistantService:
             )
         )
         assistant = await self.session.scalar(stmt)
-        
+
         if not assistant:
             raise HTTPException(404, f"Assistant '{assistant_id}' not found")
         
@@ -443,7 +449,10 @@ class AssistantService:
         """List all versions of an assistant"""
         stmt = select(AssistantORM).where(
             AssistantORM.assistant_id == assistant_id,
-            AssistantORM.user_id == user_identity
+            or_(
+                AssistantORM.user_id == user_identity,
+                AssistantORM.user_id == "system"
+            )
         )
         assistant = await self.session.scalar(stmt)
         if not assistant:
@@ -464,14 +473,14 @@ class AssistantService:
                 assistant_id=assistant_id,
                 name=v.name,
                 description=v.description,
-                config=v.config,
-                context=v.context,
+                config=v.config or {},
+                context=v.context or {},
                 graph_id=v.graph_id,
                 user_id=user_identity,
                 version=v.version,
                 created_at=v.created_at,
                 updated_at=v.created_at,
-                metadata_dict=v.metadata_dict
+                metadata=v.metadata_dict or {}
             ) for v in versions
         ]
 

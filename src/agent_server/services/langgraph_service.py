@@ -86,7 +86,7 @@ class LangGraphService:
         Uses uuid5 with a fixed namespace so that the same graph_id maps
         to the same assistant_id across restarts. Idempotent.
         """
-        from ..core.orm import Assistant as AssistantORM, get_session
+        from ..core.orm import Assistant as AssistantORM, AssistantVersion as AssistantVersionORM, get_session
         from sqlalchemy import select
         # Fixed namespace used to derive assistant IDs from graph IDs
         NS = ASSISTANT_NAMESPACE_UUID
@@ -107,6 +107,17 @@ class LangGraphService:
                             graph_id=graph_id,
                             config={},
                             user_id="system",
+                            metadata_dict={"created_by": "system"}
+                        )
+                    )
+                    session.add(
+                        AssistantVersionORM(
+                            assistant_id=assistant_id,
+                            version=1,
+                            name=graph_id,
+                            description=f"Default assistant for graph '{graph_id}'",
+                            graph_id=graph_id,
+                            metadata_dict={"created_by": "system"}
                         )
                     )
                 await session.commit()
